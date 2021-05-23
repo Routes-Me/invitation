@@ -1,0 +1,13 @@
+﻿namespace InvitationsService.Models.ResponseModel
+{
+    public class InvitationsDto
+    {
+        public string InvitationId { get; set; }
+        public string RecipientName { get; set; }
+        public string ApplicationId { get; set; }
+        public string Address { get; set; }
+        public byte[] Data { get; set; }
+        public string OfficerId { get; set; }
+        public string InstitutionId { get; set; }
+    }
+}
