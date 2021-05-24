@@ -25,22 +25,25 @@ namespace InvitationsService.Controllers
 
         [HttpPost]
         [Route("invitations")]
-        public async Task<IActionResult> Post(PostInvitationsDto invitationDto)
+        public async Task<IActionResult> Post(InvitationsDto invitationDto)
         {
-            string response = "";
             try
             {
-                response = await _invitionRepository.PostInvitation(invitationDto);
+                await _invitionRepository.PostInvitation(invitationDto);
             }
             catch (ArgumentNullException ex)
             {
                 return StatusCode(StatusCodes.Status422UnprocessableEntity, new ErrorResponse{ error = ex.Message });
             }
+            catch (KeyNotFoundException ex)
+            {
+                return StatusCode(StatusCodes.Status404NotFound, new ErrorResponse{ error = ex.Message });
+            }
             catch (Exception ex)
             {
                 return StatusCode(StatusCodes.Status400BadRequest, new ErrorResponse{ error = ex.Message });
             }
-            return StatusCode(StatusCodes.Status201Created, new SuccessResponse{message = response });
+            return StatusCode(StatusCodes.Status201Created, new SuccessResponse{ message = CommonMessage.InvitationInserted });
         }
 
         [HttpDelete]

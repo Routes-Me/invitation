@@ -1,4 +1,6 @@
-﻿namespace InvitationsService.Models.ResponseModel
+﻿using System;
+
+namespace InvitationsService.Models.ResponseModel
 {
     public class InvitationsDto
     {
@@ -9,5 +11,6 @@
         public byte[] Data { get; set; }
         public string OfficerId { get; set; }
         public string InstitutionId { get; set; }
+        public DateTime CreatedAt { get; set; }
     }
 }

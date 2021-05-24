@@ -10,8 +10,6 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Net.Mail;
 using System.Net;
-using Microsoft.AspNetCore.Http;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using RoutesSecurity;
@@ -65,7 +63,7 @@ namespace InvitationsService.Repository
                 limit = pageInfo.limit,
                 total = recordsCount
             };
-   
+
             dynamic invitationData = invitations.Select(i => new InvitationsDto {
                     InvitationId = Obfuscation.Encode(i.InvitationId),
                     RecipientName = i.RecipientName,
@@ -73,7 +71,8 @@ namespace InvitationsService.Repository
                     Address = i.Address,
                     Data = i.Data,
                     OfficerId = Obfuscation.Encode(i.OfficerId),
-                    InstitutionId = Obfuscation.Encode(i.InstitutionId)
+                    InstitutionId = Obfuscation.Encode(i.InstitutionId),
+                    CreatedAt = i.CreatedAt
                 }).ToList();       
 
             return new GetResponse
@@ -83,27 +82,45 @@ namespace InvitationsService.Repository
             };
         }
 
-        public async Task<dynamic> PostInvitation(PostInvitationsDto invitationDto)
+        public async Task<dynamic> PostInvitation(InvitationsDto invitationDto)
         {
-            if (invitationDto == null || string.IsNullOrEmpty(invitationDto.OfficerId))
+            if (invitationDto == null || string.IsNullOrEmpty(invitationDto.OfficerId) || string.IsNullOrEmpty(invitationDto.ApplicationId))
                 throw new ArgumentNullException(CommonMessage.InvalidData);
 
+            Invitations invitation = InsertInvitation(invitationDto);
+
+            string url = GetInvitationUrl(invitationDto.ApplicationId, invitation.InvitationId);
+
+            await SendEmail(invitationDto.Address, url);
+
+            return Task.CompletedTask;
+        }
+
+        private Invitations InsertInvitation(InvitationsDto invitationDto)
+        {
             Invitations invitation = new Invitations()
             {
                 OfficerId = Obfuscation.Decode(invitationDto.OfficerId),
-                Address = invitationDto.Email,
-                RecipientName = invitationDto.Name,
-                Data = Encoding.ASCII.GetBytes(JsonConvert.SerializeObject(invitationDto))
+                Address = invitationDto.Address,
+                RecipientName = invitationDto.RecipientName,
+                Data = Encoding.ASCII.GetBytes(JsonConvert.SerializeObject(invitationDto)),
+                ApplicationId = Obfuscation.Decode(invitationDto.ApplicationId),
+                CreatedAt = DateTime.Now
             };
             _context.Invitations.Add(invitation);
             _context.SaveChanges();
 
+            return invitation;
+        }
+
+        private string GetInvitationUrl(string applicationId, int invitationId)
+        {
+            RegistrationForms registrationForm = _context.RegistrationForms.Where(r => r.ApplicationId == Obfuscation.Decode(applicationId)).FirstOrDefault();
+            if (registrationForm == null)
+                throw new KeyNotFoundException(CommonMessage.RegistrationFormUrlNotFound);
+
             string token = JsonConvert.DeserializeObject<InvitationTokenResponse>(GetAPI(_dependencies.GenerateInvitationTokenUrl).Content).invitationToken.ToString();
-            string link = _emailSettings.DashboardUrl + "?inv=" + Obfuscation.Encode(invitation.InvitationId) + "&tk=" + token;
-
-            await SendEmail(invitationDto.Email, link);
-
-            return CommonMessage.InvitationInserted;
+            return registrationForm.Url + "?inv=" + Obfuscation.Encode(invitationId) + "&tk=" + token;
         }
 
         private Task SendEmail(string emailReceiver, string link)

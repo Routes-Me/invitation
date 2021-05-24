@@ -5,6 +5,5 @@
         public string From { get; set; }
         public string PW { get; set; }
         public string Subject { get; set; }
-        public string DashboardUrl { get; set; }
     }
 }

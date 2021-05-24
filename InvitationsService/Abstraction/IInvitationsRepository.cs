@@ -6,7 +6,7 @@ namespace InvitationsService.Abstraction
 {
     public interface IInvitationsRepository
     {
-        Task<dynamic> PostInvitation(PostInvitationsDto invitationsDto);
+        Task<dynamic> PostInvitation(InvitationsDto invitationsDto);
         dynamic DeleteInvitation(string invitationId);
         dynamic GetInvitation(string invitationId, Pagination pageInfo);
     }
