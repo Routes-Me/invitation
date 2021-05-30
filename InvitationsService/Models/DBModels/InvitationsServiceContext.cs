@@ -14,6 +14,7 @@ namespace InvitationsService.Models.DBModels
         }
 
         public virtual DbSet<Invitations> Invitations { get; set; }
+        public virtual DbSet<EmailInvitations> EmailInvitations { get; set; }
         public virtual DbSet<RegistrationForms> RegistrationForms { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -34,15 +35,13 @@ namespace InvitationsService.Models.DBModels
 
                 entity.Property(e => e.ApplicationId).HasColumnName("application_id");
 
-                entity.Property(e => e.Address)
-                    .HasColumnName("address")
-                    .HasColumnType("varchar(50)")
+                entity.Property(e => e.PrivilageId).HasColumnName("privilage_id");
+
+                entity.Property(e => e.Method)
+                    .HasColumnName("method")
+                    .HasColumnType("enum('email','phone_number')")
                     .HasCharSet("utf8mb4")
                     .HasCollation("utf8mb4_0900_ai_ci");
-
-                entity.Property(e => e.Data)
-                    .HasColumnName("data")
-                    .HasMaxLength(255);
 
                 entity.Property(e => e.OfficerId).HasColumnName("officer_id");
 
@@ -51,6 +50,28 @@ namespace InvitationsService.Models.DBModels
                 entity.Property(e => e.CreatedAt)
                     .HasColumnName("created_at")
                     .HasColumnType("timestamp");
+            });
+
+            modelBuilder.Entity<EmailInvitations>(entity =>
+            {
+                entity.HasKey(e => e.EmailInvitationId).HasName("PRIMARY");
+
+                entity.ToTable("email_invitations");
+
+                entity.Property(e => e.EmailInvitationId).HasColumnName("email_invitation_id");
+
+                entity.Property(e => e.Email)
+                    .HasColumnName("email")
+                    .HasColumnType("varchar(40)")
+                    .HasCharSet("utf8mb4")
+                    .HasCollation("utf8mb4_0900_ai_ci");
+
+                entity.Property(e => e.InvitationId).HasColumnName("invitation_id");
+
+                entity.HasOne(d => d.Invitation)
+                    .WithOne(p => p.EmailInvitation)
+                    .HasForeignKey<EmailInvitations>(d => d.InvitationId)
+                    .HasConstraintName("invitations_email_invitations_ibfk_1");
             });
 
             modelBuilder.Entity<RegistrationForms>(entity =>
