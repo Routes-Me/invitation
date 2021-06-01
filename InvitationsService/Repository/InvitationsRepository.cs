@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using System.Net.Mail;
 using System.Net;
 using Microsoft.Extensions.Options;
+using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using RoutesSecurity;
 using RestSharp;
@@ -50,10 +51,10 @@ namespace InvitationsService.Repository
             int recordsCount = 1;
  
             if (!string.IsNullOrEmpty(invitationId))
-                invitations = _context.Invitations.Where(i => i.InvitationId == Obfuscation.Decode(invitationId)).ToList();
+                invitations = _context.Invitations.Include(i => i.EmailInvitation).Where(i => i.InvitationId == Obfuscation.Decode(invitationId)).ToList();
             else
             {
-                invitations = _context.Invitations.Skip((pageInfo.offset - 1) * pageInfo.limit).Take(pageInfo.limit).ToList();
+                invitations = _context.Invitations.Include(i => i.EmailInvitation).Skip((pageInfo.offset - 1) * pageInfo.limit).Take(pageInfo.limit).ToList();
                 recordsCount = _context.Invitations.Count();
             }
 
@@ -68,10 +69,11 @@ namespace InvitationsService.Repository
                     InvitationId = Obfuscation.Encode(i.InvitationId),
                     RecipientName = i.RecipientName,
                     ApplicationId = Obfuscation.Encode(i.ApplicationId),
-                    Address = i.Address,
-                    Data = i.Data,
+                    PrivilageId = Obfuscation.Encode(i.PrivilageId),
                     OfficerId = Obfuscation.Encode(i.OfficerId),
                     InstitutionId = Obfuscation.Encode(i.InstitutionId),
+                    Method = i.Method,
+                    Address = i.EmailInvitation.Email,
                     CreatedAt = i.CreatedAt
                 }).ToList();       
 
@@ -100,12 +102,16 @@ namespace InvitationsService.Repository
         {
             Invitations invitation = new Invitations()
             {
-                OfficerId = Obfuscation.Decode(invitationDto.OfficerId),
-                Address = invitationDto.Address,
                 RecipientName = invitationDto.RecipientName,
-                Data = Encoding.ASCII.GetBytes(JsonConvert.SerializeObject(invitationDto)),
                 ApplicationId = Obfuscation.Decode(invitationDto.ApplicationId),
-                CreatedAt = DateTime.Now
+                PrivilageId = Obfuscation.Decode(invitationDto.PrivilageId),
+                OfficerId = Obfuscation.Decode(invitationDto.OfficerId),
+                InstitutionId = Obfuscation.Decode(invitationDto.InstitutionId),
+                Method = "email",
+                CreatedAt = DateTime.Now,
+                EmailInvitation = new EmailInvitations {
+                    Email = invitationDto.Address
+                }
             };
             _context.Invitations.Add(invitation);
             _context.SaveChanges();

@@ -7,10 +7,12 @@ namespace InvitationsService.Models.DBModels
         public int InvitationId { get; set; }
         public string RecipientName { get; set; }
         public int ApplicationId { get; set; }
-        public string Address { get; set; }
-        public byte[] Data { get; set; }
+        public int PrivilageId { get; set; }
         public int OfficerId { get; set; }
         public int InstitutionId { get; set; }
+        public string Method { get; set; }
         public DateTime CreatedAt { get; set; }
+
+        public virtual EmailInvitations EmailInvitation { get; set; }
     }
 }
