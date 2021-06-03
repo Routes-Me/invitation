@@ -10,6 +10,9 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Net.Mail;
 using System.Net;
+using System.Web;
+using System.Configuration;
+using System.IO;
 using Microsoft.Extensions.Options;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
@@ -49,7 +52,7 @@ namespace InvitationsService.Repository
         {
             List<Invitations> invitations = new List<Invitations>();
             int recordsCount = 1;
- 
+
             if (!string.IsNullOrEmpty(invitationId))
                 invitations = _context.Invitations.Include(i => i.EmailInvitation).Where(i => i.InvitationId == Obfuscation.Decode(invitationId)).ToList();
             else
@@ -65,17 +68,18 @@ namespace InvitationsService.Repository
                 total = recordsCount
             };
 
-            dynamic invitationData = invitations.Select(i => new InvitationsDto {
-                    InvitationId = Obfuscation.Encode(i.InvitationId),
-                    RecipientName = i.RecipientName,
-                    ApplicationId = Obfuscation.Encode(i.ApplicationId),
-                    PrivilageId = Obfuscation.Encode(i.PrivilageId),
-                    OfficerId = Obfuscation.Encode(i.OfficerId),
-                    InstitutionId = Obfuscation.Encode(i.InstitutionId),
-                    Method = i.Method,
-                    Address = i.EmailInvitation.Email,
-                    CreatedAt = i.CreatedAt
-                }).ToList();       
+            dynamic invitationData = invitations.Select(i => new InvitationsDto
+            {
+                InvitationId = Obfuscation.Encode(i.InvitationId),
+                RecipientName = i.RecipientName,
+                ApplicationId = Obfuscation.Encode(i.ApplicationId),
+                PrivilageId = Obfuscation.Encode(i.PrivilageId),
+                OfficerId = Obfuscation.Encode(i.OfficerId),
+                InstitutionId = Obfuscation.Encode(i.InstitutionId),
+                Method = i.Method,
+                Address = i.EmailInvitation.Email,
+                CreatedAt = i.CreatedAt
+            }).ToList();
 
             return new GetResponse
             {
@@ -93,7 +97,7 @@ namespace InvitationsService.Repository
 
             string url = GetInvitationUrl(invitationDto.ApplicationId, invitation.InvitationId);
 
-            await SendEmail(invitationDto.Address, url);
+            await SendEmail(invitationDto, url);
 
             return Task.CompletedTask;
         }
@@ -109,7 +113,8 @@ namespace InvitationsService.Repository
                 InstitutionId = Obfuscation.Decode(invitationDto.InstitutionId),
                 Method = "email",
                 CreatedAt = DateTime.Now,
-                EmailInvitation = new EmailInvitations {
+                EmailInvitation = new EmailInvitations
+                {
                     Email = invitationDto.Address
                 }
             };
@@ -129,7 +134,7 @@ namespace InvitationsService.Repository
             return registrationForm.Url + "?inv=" + Obfuscation.Encode(invitationId) + "&tk=" + token;
         }
 
-        private Task SendEmail(string emailReceiver, string link)
+        private Task SendEmail(InvitationsDto invitationDto, string link)
         {
             SmtpClient client = new SmtpClient("smtp.gmail.com")
             {
@@ -138,11 +143,23 @@ namespace InvitationsService.Repository
                 EnableSsl = true,
             };
 
-            client.Send(_emailSettings.From, emailReceiver, _emailSettings.Subject, link);
+            MailMessage msg = new MailMessage();
+            msg.IsBodyHtml = true;
+            var stringTemplateHtml = GetContentTextFile("InvitationMail.html").Replace("hrefOfInvitation", link).Replace("inviteeName", invitationDto.RecipientName);
+            msg.Body = stringTemplateHtml;
 
+            msg.From = new MailAddress(_emailSettings.From);
+            msg.To.Add(invitationDto.Address);
+            msg.Subject = _emailSettings.Subject;
+
+            client.Send(msg);
             return Task.CompletedTask;
         }
 
+        public string GetContentTextFile(string filename)
+        {
+            return File.ReadAllText($"Resources/{filename}");
+        }
         private dynamic GetAPI(string url, string query = "")
         {
             UriBuilder uriBuilder = new UriBuilder(_appSettings.Host + url);
