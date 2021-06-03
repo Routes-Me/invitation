@@ -6,13 +6,8 @@ using InvitationsService.Models.Common;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using System.Net.Mail;
 using System.Net;
-using System.Web;
-using System.Configuration;
-using System.IO;
 using Microsoft.Extensions.Options;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
@@ -26,14 +21,14 @@ namespace InvitationsService.Repository
         private readonly InvitationsServiceContext _context;
         private readonly AppSettings _appSettings;
         private readonly Dependencies _dependencies;
-        private readonly InvitationEmailSettings _emailSettings;
+        private readonly IEmailsRepository _emailRepository;
 
-        public InvitationsRepository(IOptions<AppSettings> appSettings, IOptions<Dependencies> dependencies, IOptions<InvitationEmailSettings> invitationEmailSettings, InvitationsServiceContext context)
+        public InvitationsRepository(IOptions<AppSettings> appSettings, IOptions<Dependencies> dependencies, InvitationsServiceContext context, IEmailsRepository emailRepository)
         {
             _appSettings = appSettings.Value;
             _dependencies = dependencies.Value;
-            _emailSettings = invitationEmailSettings.Value;
             _context = context;
+            _emailRepository = emailRepository;
         }
 
         public dynamic DeleteInvitation(string invitationId)
@@ -97,7 +92,7 @@ namespace InvitationsService.Repository
 
             string url = GetInvitationUrl(invitationDto.ApplicationId, invitation.InvitationId);
 
-            await SendEmail(invitationDto, url);
+            await _emailRepository.SendEmailAsync(invitationDto, url);
 
             return Task.CompletedTask;
         }
@@ -134,32 +129,6 @@ namespace InvitationsService.Repository
             return registrationForm.Url + "?inv=" + Obfuscation.Encode(invitationId) + "&tk=" + token;
         }
 
-        private Task SendEmail(InvitationsDto invitationDto, string link)
-        {
-            SmtpClient client = new SmtpClient("smtp.gmail.com")
-            {
-                Port = 587,
-                Credentials = new NetworkCredential(_emailSettings.From, _emailSettings.PW),
-                EnableSsl = true,
-            };
-
-            MailMessage msg = new MailMessage();
-            msg.IsBodyHtml = true;
-            var stringTemplateHtml = GetContentTextFile("InvitationMail.html").Replace("hrefOfInvitation", link).Replace("inviteeName", invitationDto.RecipientName);
-            msg.Body = stringTemplateHtml;
-
-            msg.From = new MailAddress(_emailSettings.From);
-            msg.To.Add(invitationDto.Address);
-            msg.Subject = _emailSettings.Subject;
-
-            client.Send(msg);
-            return Task.CompletedTask;
-        }
-
-        public string GetContentTextFile(string filename)
-        {
-            return File.ReadAllText($"Resources/{filename}");
-        }
         private dynamic GetAPI(string url, string query = "")
         {
             UriBuilder uriBuilder = new UriBuilder(_appSettings.Host + url);
