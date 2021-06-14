@@ -52,6 +52,10 @@ namespace InvitationsService
             services.Configure<InvitationEmailSettings>(Configuration.GetSection("InvitationEmailSettings"));
 
             services.AddScoped<IInvitationsRepository, InvitationsRepository>();
+            services.AddScoped<IEmailsRepository, EmailsRepository>();
+
+            services.AddHostedService<QueuedHostedService>();
+            services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
 
             services.AddApiVersioning(config =>
             {

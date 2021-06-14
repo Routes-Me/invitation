@@ -6,9 +6,7 @@ using InvitationsService.Models.Common;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using System.Net.Mail;
 using System.Net;
 using Microsoft.Extensions.Options;
 using Microsoft.EntityFrameworkCore;
@@ -23,14 +21,14 @@ namespace InvitationsService.Repository
         private readonly InvitationsServiceContext _context;
         private readonly AppSettings _appSettings;
         private readonly Dependencies _dependencies;
-        private readonly InvitationEmailSettings _emailSettings;
+        private readonly IEmailsRepository _emailRepository;
 
-        public InvitationsRepository(IOptions<AppSettings> appSettings, IOptions<Dependencies> dependencies, IOptions<InvitationEmailSettings> invitationEmailSettings, InvitationsServiceContext context)
+        public InvitationsRepository(IOptions<AppSettings> appSettings, IOptions<Dependencies> dependencies, InvitationsServiceContext context, IEmailsRepository emailRepository)
         {
             _appSettings = appSettings.Value;
             _dependencies = dependencies.Value;
-            _emailSettings = invitationEmailSettings.Value;
             _context = context;
+            _emailRepository = emailRepository;
         }
 
         public dynamic DeleteInvitation(string invitationId)
@@ -49,7 +47,7 @@ namespace InvitationsService.Repository
         {
             List<Invitations> invitations = new List<Invitations>();
             int recordsCount = 1;
- 
+
             if (!string.IsNullOrEmpty(invitationId))
                 invitations = _context.Invitations.Include(i => i.EmailInvitation).Where(i => i.InvitationId == Obfuscation.Decode(invitationId)).ToList();
             else
@@ -65,17 +63,18 @@ namespace InvitationsService.Repository
                 total = recordsCount
             };
 
-            dynamic invitationData = invitations.Select(i => new InvitationsDto {
-                    InvitationId = Obfuscation.Encode(i.InvitationId),
-                    RecipientName = i.RecipientName,
-                    ApplicationId = Obfuscation.Encode(i.ApplicationId),
-                    PrivilageId = Obfuscation.Encode(i.PrivilageId),
-                    OfficerId = Obfuscation.Encode(i.OfficerId),
-                    InstitutionId = Obfuscation.Encode(i.InstitutionId),
-                    Method = i.Method,
-                    Address = i.EmailInvitation.Email,
-                    CreatedAt = i.CreatedAt
-                }).ToList();       
+            dynamic invitationData = invitations.Select(i => new InvitationsDto
+            {
+                InvitationId = Obfuscation.Encode(i.InvitationId),
+                RecipientName = i.RecipientName,
+                ApplicationId = Obfuscation.Encode(i.ApplicationId),
+                PrivilageId = Obfuscation.Encode(i.PrivilageId),
+                OfficerId = Obfuscation.Encode(i.OfficerId),
+                InstitutionId = Obfuscation.Encode(i.InstitutionId),
+                Method = i.Method,
+                Address = i.EmailInvitation.Email,
+                CreatedAt = i.CreatedAt
+            }).ToList();
 
             return new GetResponse
             {
@@ -93,7 +92,7 @@ namespace InvitationsService.Repository
 
             string url = GetInvitationUrl(invitationDto.ApplicationId, invitation.InvitationId);
 
-            await SendEmail(invitationDto.Address, url);
+            await _emailRepository.SendEmailAsync(invitationDto, url);
 
             return Task.CompletedTask;
         }
@@ -109,7 +108,8 @@ namespace InvitationsService.Repository
                 InstitutionId = Obfuscation.Decode(invitationDto.InstitutionId),
                 Method = "email",
                 CreatedAt = DateTime.Now,
-                EmailInvitation = new EmailInvitations {
+                EmailInvitation = new EmailInvitations
+                {
                     Email = invitationDto.Address
                 }
             };
@@ -127,20 +127,6 @@ namespace InvitationsService.Repository
 
             string token = JsonConvert.DeserializeObject<InvitationTokenResponse>(GetAPI(_dependencies.GenerateInvitationTokenUrl).Content).invitationToken.ToString();
             return registrationForm.Url + "?inv=" + Obfuscation.Encode(invitationId) + "&tk=" + token;
-        }
-
-        private Task SendEmail(string emailReceiver, string link)
-        {
-            SmtpClient client = new SmtpClient("smtp.gmail.com")
-            {
-                Port = 587,
-                Credentials = new NetworkCredential(_emailSettings.From, _emailSettings.PW),
-                EnableSsl = true,
-            };
-
-            client.Send(_emailSettings.From, emailReceiver, _emailSettings.Subject, link);
-
-            return Task.CompletedTask;
         }
 
         private dynamic GetAPI(string url, string query = "")
