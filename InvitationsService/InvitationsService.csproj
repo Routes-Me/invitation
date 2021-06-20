@@ -30,4 +30,8 @@
     </Reference>
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="Resources\InvitationMail.html" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>
