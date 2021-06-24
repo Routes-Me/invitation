@@ -125,34 +125,22 @@ namespace InvitationsService.Repository
             if (registrationForm == null)
                 throw new KeyNotFoundException(CommonMessage.RegistrationFormUrlNotFound);
 
-            string token = JsonConvert.DeserializeObject<InvitationTokenResponse>(GetAPI(_dependencies.GenerateInvitationTokenUrl).Content).invitationToken.ToString();
-            return registrationForm.Url + "?inv=" + Obfuscation.Encode(invitationId) + "&tk=" + token;
+            InvitationTokenGenerationDto invitationTokenGenerationDto = new InvitationTokenGenerationDto { InvitationId = Obfuscation.Encode(invitationId) };
+            string token = JsonConvert.DeserializeObject<InvitationTokenResponse>(PostAPI(_dependencies.GenerateInvitationTokenUrl, invitationTokenGenerationDto).Content).invitationToken.ToString();
+            return registrationForm.Url + "&tk=" + token;
         }
 
-        private dynamic GetAPI(string url, string query = "")
+        private IRestResponse PostAPI(string url, dynamic objectToSend)
         {
-            UriBuilder uriBuilder = new UriBuilder(_appSettings.Host + url);
-            uriBuilder = AppendQueryToUrl(uriBuilder, query);
-            var client = new RestClient(uriBuilder.Uri);
-            var request = new RestRequest(Method.GET);
+            var client = new RestClient(_appSettings.Host + url);
+            var request = new RestRequest(Method.POST);
+            string jsonToSend = JsonConvert.SerializeObject(objectToSend);
+            request.AddParameter("application/json; charset=utf-8", jsonToSend, ParameterType.RequestBody);
+            request.RequestFormat = DataFormat.Json;
             IRestResponse response = client.Execute(request);
-
-            if (response.StatusCode == 0)
-                throw new HttpListenerException(400, CommonMessage.ConnectionFailure);
-
-            if (!response.IsSuccessful)
-                throw new HttpListenerException((int)response.StatusCode, response.Content);
-
+            if (response.StatusCode != HttpStatusCode.Created)
+                throw new Exception(response.Content);
             return response;
-        }
-
-        private UriBuilder AppendQueryToUrl(UriBuilder baseUri, string queryToAppend)
-        {
-            if (baseUri.Query != null && baseUri.Query.Length > 1)
-                baseUri.Query = baseUri.Query.Substring(1) + "&" + queryToAppend;
-            else
-                baseUri.Query = queryToAppend;
-            return baseUri;
         }
     }
 }
