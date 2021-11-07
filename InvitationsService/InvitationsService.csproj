@@ -28,6 +28,9 @@
     <Reference Include="RoutesSecurity">
       <HintPath>DLL\RoutesSecurity.dll</HintPath>
     </Reference>
+    <Reference Include="MessagingLibraries">
+      <HintPath>DLL\MessagingLibrary.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>
