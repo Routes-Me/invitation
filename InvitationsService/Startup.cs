@@ -53,6 +53,7 @@ namespace InvitationsService
 
             services.AddScoped<IInvitationsRepository, InvitationsRepository>();
             services.AddScoped<IEmailsRepository, EmailsRepository>();
+            services.AddScoped<ISmsRepository, SmsRepository>();
 
             services.AddHostedService<QueuedHostedService>();
             services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();

@@ -43,7 +43,7 @@ namespace InvitationsService.Controllers
             {
                 return StatusCode(StatusCodes.Status400BadRequest, new ErrorResponse{ error = ex.Message });
             }
-            return StatusCode(StatusCodes.Status202Accepted);
+            return StatusCode(StatusCodes.Status202Accepted, CommonMessage.InvitationInserted);
         }
 
         [HttpDelete]
