@@ -102,13 +102,20 @@ namespace InvitationsService.Repository
             Invitations invitation = InsertInvitation(invitationDto);
 
             string url = GetInvitationUrl(invitationDto.ApplicationId, invitation.InvitationId);
-            if (invitation.Method == InvitationMethods.email)
+            try
             {
-                await _emailRepository.SendEmailAsync(invitationDto, url);
+                if (invitation.Method == InvitationMethods.email)
+                {
+                    await _emailRepository.SendEmailAsync(invitationDto, url);
+                }
+                else if (invitation.Method == InvitationMethods.phone_number)
+                {
+                    await _smsRepository.SendSMSAsync(invitationDto, url);
+                }
             }
-            else if (invitation.Method == InvitationMethods.phone_number)
+            catch (Exception ex)
             {
-                await _smsRepository.SendSMSAsync(invitationDto, url);
+                throw ex;
             }
 
             return Task.CompletedTask;
@@ -116,30 +123,40 @@ namespace InvitationsService.Repository
 
         private Invitations InsertInvitation(InvitationsDto invitationDto)
         {
-            Invitations invitation = new Invitations
+            try
             {
-                RecipientName = invitationDto.RecipientName,
-                ApplicationId = Obfuscation.Decode(invitationDto.ApplicationId),
-                PrivilageId = Obfuscation.Decode(invitationDto.PrivilageId),
-                OfficerId = Obfuscation.Decode(invitationDto.OfficerId),
-                InstitutionId = Obfuscation.Decode(invitationDto.InstitutionId)
-            };
-            if (invitationDto.Method.ToLower() == "email")
-            {
-                invitation.Method = InvitationMethods.email;
-                invitation.EmailInvitation = new EmailInvitations { Email = invitationDto.Address };
-            }
-            else if (invitationDto.Method.ToLower() == "phone_number")
-            {
-                invitation.Method = InvitationMethods.phone_number;
-                invitation.PhoneInvitation = new PhoneInvitations { PhoneNumber = invitationDto.Address };
-            }
-            invitation.CreatedAt = DateTime.Now;
+                Invitations invitation = new Invitations();
+                invitation.RecipientName = invitationDto.RecipientName;
+                invitation.ApplicationId = Obfuscation.Decode(invitationDto.ApplicationId);
+                invitation.PrivilageId = Obfuscation.Decode(invitationDto.PrivilageId);
+                invitation.OfficerId = Obfuscation.Decode(invitationDto.OfficerId);
+                invitation.InstitutionId = Obfuscation.Decode(invitationDto.InstitutionId);
+                if (invitationDto.Method == InvitationMethods.email.ToString())
+                {
+                    invitation.Method = InvitationMethods.email;
+                    invitation.EmailInvitation = new EmailInvitations { Email = invitationDto.Address };
+                }
+                if (invitationDto.Method == InvitationMethods.phone_number.ToString())
+                {
+                    invitation.Method = InvitationMethods.phone_number;
+                    invitation.PhoneInvitation = new PhoneInvitations { PhoneNumber = invitationDto.Address };
+                }
+                if (invitationDto.Method == InvitationMethods.link.ToString())
+                {
+                    invitation.Method = InvitationMethods.link;
+                    //invitation.LinkInvitation = new LinkInvitations { link = invitationDto.Address };         To be implemented in future
+                }
+                invitation.CreatedAt = DateTime.Now;
 
-            _context.Invitations.Add(invitation);
-            _context.SaveChanges();
+                _context.Invitations.Add(invitation);
+                _context.SaveChanges();
 
-            return invitation;
+                return invitation;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
         }
 
         private string GetInvitationUrl(string applicationId, int invitationId)
@@ -149,9 +166,9 @@ namespace InvitationsService.Repository
             {
                 throw new KeyNotFoundException(CommonMessage.RegistrationFormUrlNotFound);
             }
-
+            string defaultMessageText = "Invitation to create an account on Routes Driver App! \n Please click the link below to confirm your phone number. \n";
             string token = JsonConvert.DeserializeObject<InvitationTokenResponse>(GetAPI(_dependencies.GenerateInvitationTokenUrl).Content).invitationToken.ToString();
-            return registrationForm.Url + "?inv=" + Obfuscation.Encode(invitationId) + "&tk=" + token;
+            return defaultMessageText + registrationForm.Url + "?inv=" + Obfuscation.Encode(invitationId) + "&tk=" + token;
         }
 
         private dynamic GetAPI(string url, string query = "")
