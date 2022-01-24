@@ -3,6 +3,7 @@ using InvitationsService.Abstraction;
 using InvitationsService.Models.Common;
 using InvitationsService.Models.DBModels;
 using InvitationsService.Repository;
+using InvitationsService.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
@@ -53,7 +54,7 @@ namespace InvitationsService
 
             services.AddScoped<IInvitationsRepository, InvitationsRepository>();
             services.AddScoped<IEmailsRepository, EmailsRepository>();
-            services.AddScoped<ISmsRepository, SmsRepository>();
+            services.AddScoped<ISmsService, SmsService>();
 
             services.AddHostedService<QueuedHostedService>();
             services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();

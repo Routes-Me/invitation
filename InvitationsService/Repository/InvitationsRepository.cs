@@ -3,6 +3,7 @@ using InvitationsService.Models;
 using InvitationsService.Models.Common;
 using InvitationsService.Models.DBModels;
 using InvitationsService.Models.ResponseModel;
+using InvitationsService.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
@@ -22,15 +23,15 @@ namespace InvitationsService.Repository
         private readonly AppSettings _appSettings;
         private readonly Dependencies _dependencies;
         private readonly IEmailsRepository _emailRepository;
-        private readonly ISmsRepository _smsRepository;
+        private readonly ISmsService _smsService;
 
-        public InvitationsRepository(IOptions<AppSettings> appSettings, IOptions<Dependencies> dependencies, InvitationsServiceContext context, IEmailsRepository emailRepository, ISmsRepository smsRepository)
+        public InvitationsRepository(IOptions<AppSettings> appSettings, IOptions<Dependencies> dependencies, InvitationsServiceContext context, IEmailsRepository emailRepository, ISmsService smsService)
         {
             _appSettings = appSettings.Value;
             _dependencies = dependencies.Value;
             _context = context;
             _emailRepository = emailRepository;
-            _smsRepository = smsRepository;
+           _smsService = smsService;
         }
 
         public dynamic DeleteInvitation(string invitationId)
@@ -110,7 +111,7 @@ namespace InvitationsService.Repository
                 }
                 else if (invitation.Method == InvitationMethods.phone_number)
                 {
-                    await _smsRepository.SendSMSAsync(invitationDto, url);
+                    await _smsService.SendSMSAsync(invitationDto, url);
                 }
             }
             catch (Exception ex)

@@ -1,12 +1,11 @@
-﻿using InvitationsService.Abstraction;
-using InvitationsService.Models.ResponseModel;
+﻿using InvitationsService.Models.ResponseModel;
 using MessagingLibraries;
 using System;
 using System.Threading.Tasks;
 
-namespace InvitationsService.Repository
+namespace InvitationsService.Services
 {
-    internal class SmsRepository : ISmsRepository
+    internal class SmsService : ISmsService
     {
         public async Task SendSMSAsync(InvitationsDto invitationDto, string link)
         {
@@ -14,9 +13,11 @@ namespace InvitationsService.Repository
             {
                 if (invitationDto.Address.Substring(0, 3) == "965")
                 {
-                    var result = await MessagingLibrary.SendSMS(invitationDto.Address, link, 1);
+                    string result = await MessagingLibrary.SendSMS(invitationDto.Address, link, 1);
                     if (result.Substring(0, 3) == "ERR")
+                    {
                         throw new Exception(" Messaging Error : " + result.Split(":")[1]);
+                    }
                 }
                 else
                 {

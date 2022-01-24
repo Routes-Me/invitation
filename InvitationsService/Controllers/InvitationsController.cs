@@ -30,6 +30,8 @@ namespace InvitationsService.Controllers
             try
             {
                 await _invitionRepository.PostInvitation(invitationDto);
+                return StatusCode(StatusCodes.Status202Accepted, new SuccessResponse { message = CommonMessage.InvitationInserted });
+
             }
             catch (ArgumentNullException ex)
             {
@@ -43,7 +45,6 @@ namespace InvitationsService.Controllers
             {
                 return StatusCode(StatusCodes.Status400BadRequest, new ErrorResponse{ error = ex.Message });
             }
-            return StatusCode(StatusCodes.Status202Accepted, CommonMessage.InvitationInserted);
         }
 
         [HttpDelete]
