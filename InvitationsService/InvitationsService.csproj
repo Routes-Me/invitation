@@ -25,6 +25,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Reference Include="MessagingLibrary">
+      <HintPath>DLL\MessagingLibrary.dll</HintPath>
+    </Reference>
     <Reference Include="RoutesSecurity">
       <HintPath>DLL\RoutesSecurity.dll</HintPath>
     </Reference>

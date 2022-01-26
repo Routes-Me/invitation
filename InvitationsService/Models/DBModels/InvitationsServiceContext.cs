@@ -15,6 +15,7 @@ namespace InvitationsService.Models.DBModels
 
         public virtual DbSet<Invitations> Invitations { get; set; }
         public virtual DbSet<EmailInvitations> EmailInvitations { get; set; }
+        public virtual DbSet<PhoneInvitations> PhoneInvitations { get; set; }
         public virtual DbSet<RegistrationForms> RegistrationForms { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -52,6 +53,29 @@ namespace InvitationsService.Models.DBModels
                     .HasColumnType("timestamp");
             });
 
+            modelBuilder.Entity<PhoneInvitations>(entity =>
+            {
+                entity.HasKey(e => e.PhoneInvitationId).HasName("PRIMARY");
+
+                entity.ToTable("phone_invitations");
+
+                entity.Property(e => e.PhoneInvitationId).HasColumnName("phone_invitation_id");
+
+                entity.Property(e => e.PhoneNumber)
+                    .HasColumnName("phone_number")
+                    .HasColumnType("varchar(40)")
+                    .HasCharSet("utf8mb4")
+                    .HasCollation("utf8mb4_0900_ai_ci");
+
+                entity.Property(e => e.InvitationId).HasColumnName("invitation_id");
+
+                entity.HasOne(d => d.Invitation)
+                    .WithOne(p => p.PhoneInvitation)
+                    .HasForeignKey<PhoneInvitations>(d => d.InvitationId)
+                    .HasConstraintName("invitations_phone_invitations_ibfk_1");
+            });
+
+
             modelBuilder.Entity<EmailInvitations>(entity =>
             {
                 entity.HasKey(e => e.EmailInvitationId).HasName("PRIMARY");
@@ -73,6 +97,8 @@ namespace InvitationsService.Models.DBModels
                     .HasForeignKey<EmailInvitations>(d => d.InvitationId)
                     .HasConstraintName("invitations_email_invitations_ibfk_1");
             });
+
+
 
             modelBuilder.Entity<RegistrationForms>(entity =>
             {
