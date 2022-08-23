@@ -13,6 +13,7 @@ using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using RoutesSecurity;
 using RestSharp;
+using InvitationsService.Services;
 
 namespace InvitationsService.Repository
 {
@@ -22,13 +23,15 @@ namespace InvitationsService.Repository
         private readonly AppSettings _appSettings;
         private readonly Dependencies _dependencies;
         private readonly IEmailsRepository _emailRepository;
+        private readonly ISmsService _smsService;
 
-        public InvitationsRepository(IOptions<AppSettings> appSettings, IOptions<Dependencies> dependencies, InvitationsServiceContext context, IEmailsRepository emailRepository)
+        public InvitationsRepository(IOptions<AppSettings> appSettings, IOptions<Dependencies> dependencies, InvitationsServiceContext context, IEmailsRepository emailRepository, ISmsService smsService)
         {
             _appSettings = appSettings.Value;
             _dependencies = dependencies.Value;
             _context = context;
             _emailRepository = emailRepository;
+            _smsService = smsService;
         }
 
         public dynamic DeleteInvitation(string invitationId)
@@ -49,10 +52,10 @@ namespace InvitationsService.Repository
             int recordsCount = 1;
 
             if (!string.IsNullOrEmpty(invitationId))
-                invitations = _context.Invitations.Include(i => i.EmailInvitation).Where(i => i.InvitationId == Obfuscation.Decode(invitationId)).ToList();
+                invitations = _context.Invitations.Include(i => i.EmailInvitation).Include(i => i.PhoneInvitation).Include(i => i.DriverInvitation).Where(i => i.InvitationId == Obfuscation.Decode(invitationId)).ToList();
             else
             {
-                invitations = _context.Invitations.Include(i => i.EmailInvitation).Skip((pageInfo.offset - 1) * pageInfo.limit).Take(pageInfo.limit).ToList();
+                invitations = _context.Invitations.Include(i => i.EmailInvitation).Include(i => i.PhoneInvitation).Include(i => i.DriverInvitation).Skip((pageInfo.offset - 1) * pageInfo.limit).Take(pageInfo.limit).ToList();
                 recordsCount = _context.Invitations.Count();
             }
 
@@ -71,9 +74,11 @@ namespace InvitationsService.Repository
                 PrivilageId = Obfuscation.Encode(i.PrivilageId),
                 OfficerId = Obfuscation.Encode(i.OfficerId),
                 InstitutionId = Obfuscation.Encode(i.InstitutionId),
-                Method = i.Method,
-                Address = i.EmailInvitation.Email,
-                CreatedAt = i.CreatedAt
+                Method = i.Method.ToString(),
+                Address = i.Method == InvitationMethods.email ? i.EmailInvitation.Email : i.PhoneInvitation.PhoneNumber,
+                CreatedAt = i.CreatedAt,
+                UserType = i.UserType.ToString(),
+                VehicleId = i.UserType.ToString() == UserType.driver.ToString() ? Obfuscation.Encode(Convert.ToInt32(i.DriverInvitation.VehicleId)) : ""
             }).ToList();
 
             return new GetResponse
@@ -91,32 +96,70 @@ namespace InvitationsService.Repository
             Invitations invitation = InsertInvitation(invitationDto);
 
             string url = GetInvitationUrl(invitationDto.ApplicationId, invitation.InvitationId);
-
-            await _emailRepository.SendEmailAsync(invitationDto, url);
+            try
+            {
+                if (invitation.Method == InvitationMethods.email)
+                {
+                    await _emailRepository.SendEmailAsync(invitationDto, url);
+                }
+                else if (invitation.Method == InvitationMethods.phone_number)
+                {
+                    await _smsService.SendSMSAsync(invitationDto, url);
+                }
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
 
             return Task.CompletedTask;
         }
 
         private Invitations InsertInvitation(InvitationsDto invitationDto)
         {
-            Invitations invitation = new Invitations()
+            try
             {
-                RecipientName = invitationDto.RecipientName,
-                ApplicationId = Obfuscation.Decode(invitationDto.ApplicationId),
-                PrivilageId = Obfuscation.Decode(invitationDto.PrivilageId),
-                OfficerId = Obfuscation.Decode(invitationDto.OfficerId),
-                InstitutionId = Obfuscation.Decode(invitationDto.InstitutionId),
-                Method = "email",
-                CreatedAt = DateTime.Now,
-                EmailInvitation = new EmailInvitations
+                Invitations invitation = new Invitations();
+                invitation.RecipientName = invitationDto.RecipientName;
+                invitation.ApplicationId = Obfuscation.Decode(invitationDto.ApplicationId);
+                invitation.PrivilageId = Obfuscation.Decode(invitationDto.PrivilageId);
+                invitation.OfficerId = Obfuscation.Decode(invitationDto.OfficerId);
+                invitation.InstitutionId = Obfuscation.Decode(invitationDto.InstitutionId);
+                if (invitationDto.Method == InvitationMethods.email.ToString())
                 {
-                    Email = invitationDto.Address
+                    invitation.Method = InvitationMethods.email;
+                    invitation.EmailInvitation = new EmailInvitations { Email = invitationDto.Address };
                 }
-            };
-            _context.Invitations.Add(invitation);
-            _context.SaveChanges();
+                if (invitationDto.Method == InvitationMethods.phone_number.ToString())
+                {
+                    invitation.Method = InvitationMethods.phone_number;
+                    invitation.PhoneInvitation = new PhoneInvitations { PhoneNumber = invitationDto.Address };
+                }
+                if (invitationDto.Method == InvitationMethods.link.ToString())
+                {
+                    invitation.Method = InvitationMethods.link;
+                    //invitation.LinkInvitation = new LinkInvitations { link = invitationDto.Address };         To be implemented in future
+                }
 
-            return invitation;
+
+                invitation.UserType = (invitationDto.UserType == UserType.user.ToString() || string.IsNullOrEmpty(invitationDto.UserType.ToString())) ? UserType.user : UserType.driver;
+                invitation.CreatedAt = DateTime.Now;
+
+                _context.Invitations.Add(invitation);
+                _context.SaveChanges();
+
+                if (invitation.UserType == UserType.driver && !string.IsNullOrEmpty(invitationDto.VehicleId))
+                {
+                    DriverInvitations driverInvitations = new DriverInvitations { InvitationId = invitation.InvitationId, VehicleId = Obfuscation.Decode(invitationDto.VehicleId) };
+                    _context.DriverInvitations.Add(driverInvitations);
+                    _context.SaveChanges();
+                }
+                return invitation;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
         }
 
         private string GetInvitationUrl(string applicationId, int invitationId)
@@ -125,16 +168,17 @@ namespace InvitationsService.Repository
             if (registrationForm == null)
                 throw new KeyNotFoundException(CommonMessage.RegistrationFormUrlNotFound);
 
+            string defaultMessageText = "Invitation to create an account on Routes Driver App! \n Please click the link below to confirm your phone number. \n";
             string token = JsonConvert.DeserializeObject<InvitationTokenResponse>(GetAPI(_dependencies.GenerateInvitationTokenUrl).Content).invitationToken.ToString();
-            return registrationForm.Url + "?inv=" + Obfuscation.Encode(invitationId) + "&tk=" + token;
+            return defaultMessageText + registrationForm.Url + "?inv=" + Obfuscation.Encode(invitationId) + "&tk=" + token;
         }
 
         private dynamic GetAPI(string url, string query = "")
         {
             UriBuilder uriBuilder = new UriBuilder(_appSettings.Host + url);
             uriBuilder = AppendQueryToUrl(uriBuilder, query);
-            var client = new RestClient(uriBuilder.Uri);
-            var request = new RestRequest(Method.GET);
+            RestClient client = new RestClient(uriBuilder.Uri);
+            RestRequest request = new RestRequest(Method.GET);
             IRestResponse response = client.Execute(request);
 
             if (response.StatusCode == 0)
