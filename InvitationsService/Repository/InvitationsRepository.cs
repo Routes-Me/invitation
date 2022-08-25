@@ -31,7 +31,7 @@ namespace InvitationsService.Repository
             _dependencies = dependencies.Value;
             _context = context;
             _emailRepository = emailRepository;
-           _smsService = smsService;
+            _smsService = smsService;
         }
 
         public dynamic DeleteInvitation(string invitationId)
@@ -57,11 +57,11 @@ namespace InvitationsService.Repository
 
             if (!string.IsNullOrEmpty(invitationId))
             {
-                invitations = _context.Invitations.Include(i => i.EmailInvitation).Include(i => i.PhoneInvitation).Where(i => i.InvitationId == Obfuscation.Decode(invitationId)).ToList();
+                invitations = _context.Invitations.Include(i => i.EmailInvitation).Include(i => i.PhoneInvitation).Include(i => i.DriverInvitation).Where(i => i.InvitationId == Obfuscation.Decode(invitationId)).ToList();
             }
             else
             {
-                invitations = _context.Invitations.Include(i => i.EmailInvitation).Include(i => i.PhoneInvitation).Skip((pageInfo.offset - 1) * pageInfo.limit).Take(pageInfo.limit).ToList();
+                invitations = _context.Invitations.Include(i => i.EmailInvitation).Include(i => i.PhoneInvitation).Include(i => i.DriverInvitation).Skip((pageInfo.offset - 1) * pageInfo.limit).Take(pageInfo.limit).ToList();
                 recordsCount = _context.Invitations.Count();
             }
 
@@ -82,7 +82,9 @@ namespace InvitationsService.Repository
                 InstitutionId = Obfuscation.Encode(i.InstitutionId),
                 Method = i.Method.ToString(),
                 Address = i.Method == InvitationMethods.email ? i.EmailInvitation.Email : i.PhoneInvitation.PhoneNumber,
-                CreatedAt = i.CreatedAt
+                CreatedAt = i.CreatedAt,
+                UserType = i.UserType.ToString(),
+                VehicleId = i.UserType.ToString() == UserType.driver.ToString() ? Obfuscation.Encode(Convert.ToInt32(i.DriverInvitation.VehicleId)) : ""
             }).ToList();
 
             return new GetResponse
@@ -147,11 +149,20 @@ namespace InvitationsService.Repository
                     invitation.Method = InvitationMethods.link;
                     //invitation.LinkInvitation = new LinkInvitations { link = invitationDto.Address };         To be implemented in future
                 }
+
+
+                invitation.UserType = (invitationDto.UserType == UserType.user.ToString() || string.IsNullOrEmpty(invitationDto.UserType.ToString())) ? UserType.user : UserType.driver;
                 invitation.CreatedAt = DateTime.Now;
 
                 _context.Invitations.Add(invitation);
                 _context.SaveChanges();
 
+                if (invitation.UserType == UserType.driver && !string.IsNullOrEmpty(invitationDto.VehicleId))
+                {
+                    DriverInvitations driverInvitations = new DriverInvitations { InvitationId = invitation.InvitationId, VehicleId = Obfuscation.Decode(invitationDto.VehicleId) };
+                    _context.DriverInvitations.Add(driverInvitations);
+                    _context.SaveChanges();
+                }
                 return invitation;
             }
             catch (Exception ex)
