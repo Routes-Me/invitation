@@ -10,10 +10,10 @@ resources:
 
 variables:
   # Container registry service connection established during pipeline creation
-  dockerRegistryServiceConnection: 'ac168a4f-f586-40cb-8649-f8c1b2843361'
+  dockerRegistryServiceConnection: '27d95728-c4b1-4f0c-bc0e-300ccb06feea'
   imageRepository: 'invitationservice'
   containerRegistry: 'stagenoruaebscontainerregistry.azurecr.io'
-  dockerfilePath: '$(Build.SourcesDirectory)/InvitationsService/Dockerfile.stage'
+  dockerfilePath: '$(Build.SourcesDirectory)/InvitationsService/Dockerfile'
   tag: '$(Build.BuildId)'
 
   # Agent VM image name
