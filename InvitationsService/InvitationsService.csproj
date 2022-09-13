@@ -25,9 +25,16 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Reference Include="MessagingLibrary">
+      <HintPath>DLL\MessagingLibrary.dll</HintPath>
+    </Reference>
     <Reference Include="RoutesSecurity">
       <HintPath>DLL\RoutesSecurity.dll</HintPath>
     </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Resources\InvitationMail.html" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>
