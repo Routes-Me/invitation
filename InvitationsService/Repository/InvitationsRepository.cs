@@ -31,7 +31,7 @@ namespace InvitationsService.Repository
             _dependencies = dependencies.Value;
             _context = context;
             _emailRepository = emailRepository;
-           _smsService = smsService;
+            _smsService = smsService;
         }
 
         public dynamic DeleteInvitation(string invitationId)
@@ -167,9 +167,11 @@ namespace InvitationsService.Repository
             {
                 throw new KeyNotFoundException(CommonMessage.RegistrationFormUrlNotFound);
             }
-            string defaultMessageText = "Invitation to create an account on Routes Driver App! \n Please click the link below to confirm your phone number. \n";
             string token = JsonConvert.DeserializeObject<InvitationTokenResponse>(GetAPI(_dependencies.GenerateInvitationTokenUrl).Content).invitationToken.ToString();
-            return defaultMessageText + registrationForm.Url + "?inv=" + Obfuscation.Encode(invitationId) + "&tk=" + token;
+            if (applicationId == "3")
+                return registrationForm.Url + Obfuscation.Encode(invitationId) + "&tk=" + token;
+            else
+                return registrationForm.Url + "?inv=" + Obfuscation.Encode(invitationId) + "&tk=" + token;
         }
 
         private dynamic GetAPI(string url, string query = "")
