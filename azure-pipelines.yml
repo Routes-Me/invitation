@@ -10,7 +10,7 @@ resources:
 
 variables:
   # Container registry service connection established during pipeline creation
-  dockerRegistryServiceConnection: '3d944db7-e81a-4781-b541-d29a051c4851'
+  dockerRegistryServiceConnection: '1886a498-855b-477c-aef4-0f4259d6ba2d'
   imageRepository: 'invitationservice'
   containerRegistry: 'noruaebscontainerregistry.azurecr.io'
   dockerfilePath: '$(Build.SourcesDirectory)/InvitationsService/Dockerfile'

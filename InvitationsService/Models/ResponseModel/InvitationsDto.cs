@@ -12,6 +12,11 @@ namespace InvitationsService.Models.ResponseModel
         public string Method { get; set; }
         public string OfficerId { get; set; }
         public string InstitutionId { get; set; }
+        public string UserType { get; set; }
         public DateTime CreatedAt { get; set; }
+
+#nullable enable
+        public string? VehicleId { get; set; }
+
     }
 }
