@@ -104,7 +104,7 @@ namespace InvitationsService.Repository
 
             Invitations invitation = InsertInvitation(invitationDto);
 
-            string url = "test opt : "+ Obfuscation.Encode(invitation.InvitationId);  //GetInvitationUrl(invitationDto.ApplicationId, invitation.InvitationId);
+            string url = GetInvitationUrl(invitationDto.ApplicationId, invitation.InvitationId);
             try
             {
                 if (invitation.Method == InvitationMethods.email)
