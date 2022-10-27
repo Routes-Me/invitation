@@ -104,7 +104,7 @@ namespace InvitationsService.Repository
 
             Invitations invitation = InsertInvitation(invitationDto);
 
-            string url = "test opt : "+ Obfuscation.Encode(invitation.InvitationId);  //GetInvitationUrl(invitationDto.ApplicationId, invitation.InvitationId);
+            string url = GetInvitationUrl(invitationDto.ApplicationId, invitation.InvitationId);
             try
             {
                 if (invitation.Method == InvitationMethods.email)
@@ -178,9 +178,11 @@ namespace InvitationsService.Repository
             {
                 throw new KeyNotFoundException(CommonMessage.RegistrationFormUrlNotFound);
             }
-            string defaultMessageText = "Invitation to create an account on Routes Driver App! \n Please click the link below to confirm your phone number. \n";
             string token = JsonConvert.DeserializeObject<InvitationTokenResponse>(GetAPI(_dependencies.GenerateInvitationTokenUrl).Content).invitationToken.ToString();
-            return defaultMessageText + registrationForm.Url + "?inv=" + Obfuscation.Encode(invitationId) + "&tk=" + token;
+            if (Obfuscation.Decode(applicationId) == 3)
+                return registrationForm.Url + Obfuscation.Encode(invitationId) + "&tk=" + token;
+            else
+                return registrationForm.Url + "?inv=" + Obfuscation.Encode(invitationId) + "&tk=" + token;
         }
 
         private dynamic GetAPI(string url, string query = "")
