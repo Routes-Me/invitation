@@ -10,8 +10,8 @@ resources:
 
 variables:
   # Container registry service connection established during pipeline creation
-  dockerRegistryServiceConnection: '2d713831-b490-4d1f-aa4f-57de2cbdc3c7'
-  imageRepository: 'invitationserviceTest'
+  dockerRegistryServiceConnection: 'ff23034a-5831-4cef-bb45-d4793671d6d3'
+  imageRepository: 'invitationservicev2'
   containerRegistry: 'stagenoruaebscontainerregistry.azurecr.io'
   dockerfilePath: '$(Build.SourcesDirectory)/InvitationsService/Dockerfile.stage'
   tag: '$(Build.BuildId)'
