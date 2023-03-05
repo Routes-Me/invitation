@@ -104,7 +104,7 @@ namespace InvitationsService.Repository
 
             Invitations invitation = InsertInvitation(invitationDto);
 
-            string url = "test opt : "+ Obfuscation.Encode(invitation.InvitationId);  //GetInvitationUrl(invitationDto.ApplicationId, invitation.InvitationId);
+            string url = GetInvitationUrl(invitationDto.ApplicationId, invitation.InvitationId);
             try
             {
                 if (invitation.Method == InvitationMethods.email)
@@ -179,7 +179,7 @@ namespace InvitationsService.Repository
                 throw new KeyNotFoundException(CommonMessage.RegistrationFormUrlNotFound);
             }
             string token = JsonConvert.DeserializeObject<InvitationTokenResponse>(GetAPI(_dependencies.GenerateInvitationTokenUrl).Content).invitationToken.ToString();
-            if (applicationId == "3")
+            if (Obfuscation.Decode(applicationId) == 3)
                 return registrationForm.Url + Obfuscation.Encode(invitationId) + "&tk=" + token;
             else
                 return registrationForm.Url + "?inv=" + Obfuscation.Encode(invitationId) + "&tk=" + token;
