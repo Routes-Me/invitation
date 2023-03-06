@@ -151,7 +151,7 @@ namespace InvitationsService.Repository
                 }
 
 
-                invitation.UserType = (invitationDto.UserType == UserType.user.ToString() || string.IsNullOrEmpty(invitationDto.UserType.ToString())) ? UserType.user : UserType.driver;
+                invitation.UserType = (invitationDto.UserType == UserType.driver.ToString() && !string.IsNullOrEmpty(invitationDto.UserType.ToString())) ? UserType.driver : UserType.user;
                 invitation.CreatedAt = DateTime.Now;
 
                 _context.Invitations.Add(invitation);
