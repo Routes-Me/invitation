@@ -150,8 +150,8 @@ namespace InvitationsService.Repository
                     //invitation.LinkInvitation = new LinkInvitations { link = invitationDto.Address };         To be implemented in future
                 }
 
-
-                invitation.UserType = (invitationDto.UserType == UserType.driver.ToString() && !string.IsNullOrEmpty(invitationDto.UserType.ToString())) ? UserType.driver : UserType.user;
+                
+                invitation.UserType = invitationDto.UserType == UserType.user.ToString()? UserType.user : UserType.driver;
                 invitation.CreatedAt = DateTime.Now;
 
                 _context.Invitations.Add(invitation);
